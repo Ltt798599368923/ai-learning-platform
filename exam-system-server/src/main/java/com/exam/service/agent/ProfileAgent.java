@@ -111,7 +111,13 @@ public class ProfileAgent implements LearningAgent {
         try {
             output.setStructuredData(objectMapper.readTree(forcedProfile.toJSONString()));
         } catch (Exception e) {
-            log.error("Failed to parse forced profile", e);
+            log.warn("Failed to parse forced profile, using empty node", e);
+            try {
+                output.setStructuredData(objectMapper.readTree("{}"));
+            } catch (Exception ex) {
+                // should never happen
+                output.setStructuredData(objectMapper.createObjectNode());
+            }
         }
         output.setRawResponse(forcedProfile.toJSONString());
         return output;

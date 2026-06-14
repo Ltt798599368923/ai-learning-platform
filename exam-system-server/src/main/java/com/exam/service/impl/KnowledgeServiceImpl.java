@@ -30,7 +30,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     public Map<String, Object> getKnowledgeGraph(Long courseId) {
         Course course = courseMapper.selectById(courseId);
         if (course == null) {
-            throw new RuntimeException("课程不存在");
+            return Map.of("points", List.of(), "edges", List.of());
         }
 
         // 获取该课程的所有知识点

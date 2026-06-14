@@ -171,8 +171,28 @@ public class AgentOrchestrator {
                     Map.of("type", "text", "text", "已完成学习画像构建！正在为您规划学习路径..."), session.getId());
             Thread.sleep(500);
 
-            // 进入规划和生成阶段
-            handlePlanningAndGeneratingPhase(session, session.getUserId(), userMessage, emitter);
+            // 进入规划和生成阶段 — 画像刚完成，直接生成路径，不依赖 LLM 意图分类
+            sendPhase(emitter, "planning", 0.50, Map.of("summary", "正在为您规划学习路径..."), session.getId());
+
+            // 直接调用 PlanAgent 生成路径并保存
+            String profileJson = getUserProfileJson(session.getUserId());
+            String graphJson = getKnowledgeGraphJson(1L);
+            String prompt = planAgent.buildPromptWithProfileAndGraph(profileJson, graphJson);
+            AgentContext ctx = buildContext(session.getId(), session.getUserId(), null);
+            AgentOutput planResult = planAgent.execute(new AgentInput(prompt, List.of(), ctx));
+
+            if ("success".equals(planResult.getStatus())) {
+                PlanReport planReport = planAgent.parsePlanReport(planResult);
+                if (planReport != null) {
+                    saveLearningPath(planReport, session.getUserId(), session.getId());
+                    sendPhase(emitter, "planning", 0.60,
+                            Map.of("summary", "已生成学习路径，共" + planReport.getNodes().size() + "个节点"), session.getId());
+                }
+            }
+
+            // 继续走生成和合成阶段
+            OrchestrationPlan genPlan = buildGenerateOnlyPlan(session.getUserId());
+            executePlan(session, session.getUserId(), genPlan, emitter);
         } else {
             // 继续提问 - 从structuredData中提取显示文本
             JsonNode data = output.getStructuredData();
@@ -283,6 +303,65 @@ public class AgentOrchestrator {
             // 返回默认计划：完整流程
             return buildDefaultPlan(userId);
         }
+    }
+
+    /**
+     * 构建仅包含 generate 步骤的计划（路径已单独保存）
+     */
+    private OrchestrationPlan buildGenerateOnlyPlan(Long userId) {
+        OrchestrationPlan plan = new OrchestrationPlan();
+        plan.setComplexity("complex");
+
+        OrchestrationPlan.PlanStep genStep = new OrchestrationPlan.PlanStep();
+        genStep.setStep(1);
+        genStep.setAgent("generate");
+        genStep.setTask("生成学习资源");
+        genStep.setDependsOn(List.of());
+        genStep.setParallel(true);
+        
+        plan.setPlan(List.of(genStep));
+        return plan;
+    }
+
+    /**
+     * 构建完整管线计划（profile 完成后直接使用，跳过意图分类）
+     */
+    private OrchestrationPlan buildFullPipelinePlan(Long userId) {
+        UserProfile profile = userProfileService.getUserProfile(userId);
+        boolean hasProfile = profile != null;
+
+        OrchestrationPlan plan = new OrchestrationPlan();
+        plan.setComplexity("complex");
+
+        List<OrchestrationPlan.PlanStep> steps = new ArrayList<>();
+        int stepNum = 1;
+
+        if (!hasProfile) {
+            OrchestrationPlan.PlanStep profileStep = new OrchestrationPlan.PlanStep();
+            profileStep.setStep(stepNum++);
+            profileStep.setAgent("profile");
+            profileStep.setTask("分析用户学习水平");
+            profileStep.setDependsOn(List.of());
+            steps.add(profileStep);
+        }
+
+        OrchestrationPlan.PlanStep planStep = new OrchestrationPlan.PlanStep();
+        planStep.setStep(stepNum++);
+        planStep.setAgent("plan");
+        planStep.setTask("基于画像生成学习路径");
+        planStep.setDependsOn(steps.isEmpty() ? List.of() : List.of(1));
+        steps.add(planStep);
+
+        OrchestrationPlan.PlanStep genStep = new OrchestrationPlan.PlanStep();
+        genStep.setStep(stepNum++);
+        genStep.setAgent("generate");
+        genStep.setTask("生成学习资源");
+        genStep.setDependsOn(List.of(planStep.getStep()));
+        genStep.setParallel(true);
+        steps.add(genStep);
+
+        plan.setPlan(steps);
+        return plan;
     }
 
     /**
@@ -629,25 +708,32 @@ public class AgentOrchestrator {
     }
 
     private void saveLearningPath(PlanReport planReport, Long userId, Long sessionId) {
-        LearningPath path = new LearningPath();
-        path.setUserId(userId);
-        path.setCourseId(planReport.getCourseId());
-        path.setSessionId(sessionId);
-        path.setStatus("active");
+        try {
+            LearningPath path = new LearningPath();
+            path.setUserId(userId);
+            path.setCourseId(planReport.getCourseId());
+            path.setSessionId(sessionId);
+            path.setStatus("active");
 
-        List<PathNode> nodes = new ArrayList<>();
-        for (PlanReport.PathNodeInfo nodeInfo : planReport.getNodes()) {
-            PathNode node = new PathNode();
-            node.setNodeOrder(nodeInfo.getOrder());
-            node.setTitle(nodeInfo.getTitle());
-            node.setNodeType(nodeInfo.getType());
-            node.setEstimatedMinutes(nodeInfo.getEstimatedMinutes());
-            node.setReason(nodeInfo.getReason());
-            node.setStatus("pending");
-            nodes.add(node);
+            List<PathNode> nodes = new ArrayList<>();
+            for (PlanReport.PathNodeInfo nodeInfo : planReport.getNodes()) {
+                PathNode node = new PathNode();
+                node.setNodeOrder(nodeInfo.getOrder());
+                node.setTitle(nodeInfo.getTitle());
+                node.setNodeType(nodeInfo.getType() != null ? nodeInfo.getType() : "new_learn");
+                node.setEstimatedMinutes(nodeInfo.getEstimatedMinutes() != null ? nodeInfo.getEstimatedMinutes() : 30);
+                node.setReason(nodeInfo.getReason());
+                node.setStatus("pending");
+                // 不设置 knowledgePointIds，避免外键约束失败；节点信息通过 title/reason 已能表达
+                node.setKnowledgePointIds(List.of());
+                nodes.add(node);
+            }
+            path.setNodes(nodes);
+            learningPathService.createLearningPath(path);
+            log.info("Learning path saved: pathId={}, nodes={}", path.getId(), nodes.size());
+        } catch (Exception e) {
+            log.error("Failed to save learning path", e);
         }
-        path.setNodes(nodes);
-        learningPathService.createLearningPath(path);
     }
 
     private void saveGeneratedResources(List<ResourceReport> resources) {
@@ -681,6 +767,22 @@ public class AgentOrchestrator {
             return objectMapper.writeValueAsString(graph);
         } catch (Exception e) {
             return "{}";
+        }
+    }
+
+    /**
+     * 获取会话的第一条用户消息（初始学习意图）
+     */
+    private String getInitialUserMessage(Long sessionId) {
+        try {
+            List<AgentMessage> history = agentMessageMapper.selectBySessionId(sessionId);
+            return history.stream()
+                    .filter(m -> "user".equals(m.getRole()))
+                    .findFirst()
+                    .map(AgentMessage::getContent)
+                    .orElse(null);
+        } catch (Exception e) {
+            return null;
         }
     }
 

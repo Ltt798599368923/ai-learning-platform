@@ -228,15 +228,111 @@ public class PlanAgent implements LearningAgent {
 
     /**
      * 解析路径报告
+     * 当 JSON 无法完整映射时，构建兜底路径确保学习路径始终被保存
      */
     public PlanReport parsePlanReport(AgentOutput output) {
         try {
             JsonNode data = output.getStructuredData();
-            return objectMapper.treeToValue(data, PlanReport.class);
+            PlanReport report = objectMapper.treeToValue(data, PlanReport.class);
+            if (report.getNodes() != null && !report.getNodes().isEmpty()) {
+                return report;
+            }
         } catch (Exception e) {
-            log.error("Failed to parse plan report", e);
-            return null;
+            log.warn("Failed to parse plan report as PlanReport, building fallback", e);
         }
+
+        // 兜底：从原始JSON中尽可能提取节点信息
+        return buildFallbackPlan(output);
+    }
+
+    /**
+     * 构建兜底路径 — 当 LLM JSON 格式不匹配 PlanReport 时使用
+     */
+    private PlanReport buildFallbackPlan(AgentOutput output) {
+        PlanReport report = new PlanReport();
+        report.setTitle("个性化学习路径");
+        report.setCourseId(1L);
+
+        try {
+            JsonNode data = output.getStructuredData();
+            List<PlanReport.PathNodeInfo> nodes = new ArrayList<>();
+
+            // 尝试从 data.nodes 获取
+            JsonNode nodesArray = data.get("nodes");
+            if (nodesArray != null && nodesArray.isArray()) {
+                for (int i = 0; i < nodesArray.size(); i++) {
+                    JsonNode nodeJson = nodesArray.get(i);
+                    PlanReport.PathNodeInfo node = new PlanReport.PathNodeInfo();
+                    node.setOrder(i + 1);
+                    node.setTitle(getStringField(nodeJson, "title", "学习节点 " + (i + 1)));
+                    node.setType(getStringField(nodeJson, "type", "new_learn"));
+                    node.setEstimatedMinutes(getIntField(nodeJson, "estimatedMinutes", 30));
+                    node.setReason(getStringField(nodeJson, "reason", ""));
+                    node.setKnowledgePointIds(getLongListField(nodeJson, "knowledgePointIds"));
+                    nodes.add(node);
+                }
+            }
+
+            // 尝试从 data 根层级提取（某些 LLM 可能返回扁平结构）
+            if (nodes.isEmpty() && data.isArray()) {
+                for (int i = 0; i < data.size(); i++) {
+                    JsonNode nodeJson = data.get(i);
+                    PlanReport.PathNodeInfo node = new PlanReport.PathNodeInfo();
+                    node.setOrder(i + 1);
+                    node.setTitle(getStringField(nodeJson, "title", getStringField(nodeJson, "name", "学习节点 " + (i + 1))));
+                    node.setType(getStringField(nodeJson, "type", "new_learn"));
+                    node.setEstimatedMinutes(getIntField(nodeJson, "estimatedMinutes", getIntField(nodeJson, "estimated_minutes", 30)));
+                    node.setReason(getStringField(nodeJson, "reason", ""));
+                    node.setKnowledgePointIds(getLongListField(nodeJson, "knowledgePointIds"));
+                    nodes.add(node);
+                }
+            }
+
+            // 极端兜底：至少生成一个基础节点
+            if (nodes.isEmpty()) {
+                PlanReport.PathNodeInfo node = new PlanReport.PathNodeInfo();
+                node.setOrder(1);
+                node.setTitle("基础学习阶段");
+                node.setType("new_learn");
+                node.setEstimatedMinutes(30);
+                node.setReason("根据您的画像生成的个性化学习路径");
+                node.setKnowledgePointIds(List.of());
+                nodes.add(node);
+            }
+
+            report.setNodes(nodes);
+        } catch (Exception e) {
+            log.error("Fallback plan construction failed", e);
+            PlanReport.PathNodeInfo node = new PlanReport.PathNodeInfo();
+            node.setOrder(1);
+            node.setTitle("基础学习阶段");
+            node.setType("new_learn");
+            node.setEstimatedMinutes(30);
+            node.setReason("根据您的画像生成的个性化学习路径");
+            node.setKnowledgePointIds(List.of());
+            report.setNodes(List.of(node));
+        }
+
+        return report;
+    }
+
+    private String getStringField(JsonNode node, String field, String defaultValue) {
+        if (node == null || !node.has(field)) return defaultValue;
+        JsonNode fieldNode = node.get(field);
+        return fieldNode.isNull() ? defaultValue : fieldNode.asText(defaultValue);
+    }
+
+    private int getIntField(JsonNode node, String field, int defaultValue) {
+        if (node == null || !node.has(field)) return defaultValue;
+        JsonNode fieldNode = node.get(field);
+        return fieldNode.isInt() ? fieldNode.asInt() : defaultValue;
+    }
+
+    private List<Long> getLongListField(JsonNode node, String field) {
+        if (node == null || !node.has(field) || !node.get(field).isArray()) return List.of();
+        List<Long> result = new ArrayList<>();
+        node.get(field).forEach(item -> { if (item.isNumber()) result.add(item.asLong()); });
+        return result;
     }
 
     /**
