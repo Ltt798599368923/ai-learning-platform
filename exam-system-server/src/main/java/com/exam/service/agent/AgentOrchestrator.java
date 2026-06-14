@@ -714,6 +714,8 @@ public class AgentOrchestrator {
             path.setCourseId(planReport.getCourseId());
             path.setSessionId(sessionId);
             path.setStatus("active");
+            path.setCreatedAt(LocalDateTime.now());
+            path.setUpdatedAt(LocalDateTime.now());
 
             List<PathNode> nodes = new ArrayList<>();
             for (PlanReport.PathNodeInfo nodeInfo : planReport.getNodes()) {
