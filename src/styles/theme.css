@@ -1,0 +1,209 @@
+/* ============================================
+   清新绿主题 - AI云学智训平台
+   主色调: #10B981 (翡翠绿)
+   辅助色: #059669 (深绿), #34D399 (浅绿)
+   点缀色: #F59E0B (琥珀黄), #3B82F6 (天空蓝)
+   ============================================ */
+
+:root {
+  /* 主色调 */
+  --primary-color: #10B981;
+  --primary-light: #34D399;
+  --primary-dark: #059669;
+  --primary-bg: #ECFDF5;
+  
+  /* 辅助色 */
+  --secondary-color: #3B82F6;
+  --secondary-light: #60A5FA;
+  --secondary-dark: #2563EB;
+  
+  /* 点缀色 */
+  --accent-color: #F59E0B;
+  --accent-light: #FBBF24;
+  --accent-dark: #D97706;
+  
+  /* 背景色 */
+  --bg-primary: #F0FDF4;
+  --bg-secondary: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-hover: #F0FDF4;
+  
+  /* 文字色 */
+  --text-primary: #1F2937;
+  --text-secondary: #4B5563;
+  --text-muted: #9CA3AF;
+  --text-light: #6B7280;
+  
+  /* 边框色 */
+  --border-color: #D1FAE5;
+  --border-light: #ECFDF5;
+  
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px rgba(16, 185, 129, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(16, 185, 129, 0.1), 0 2px 4px -1px rgba(16, 185, 129, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(16, 185, 129, 0.1), 0 4px 6px -2px rgba(16, 185, 129, 0.05);
+  
+  /* 渐变 */
+  --gradient-primary: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  --gradient-light: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  --gradient-accent: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  
+  /* 圆角 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
+
+/* Element Plus 主题覆盖 */
+:root {
+  --el-color-primary: #10B981;
+  --el-color-primary-light-3: #6EE7B7;
+  --el-color-primary-light-5: #A7F3D0;
+  --el-color-primary-light-7: #D1FAE5;
+  --el-color-primary-light-8: #ECFDF5;
+  --el-color-primary-light-9: #F0FDF4;
+  --el-color-primary-dark-2: #059669;
+  --el-color-success: #10B981;
+  --el-color-warning: #F59E0B;
+  --el-color-danger: #EF4444;
+  --el-color-info: #6B7280;
+}
+
+/* 全局基础样式 */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* 导航栏通用样式 */
+.navbar {
+  background: var(--bg-secondary) !important;
+  box-shadow: var(--shadow-md) !important;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.navbar .title {
+  color: var(--text-primary);
+}
+
+.navbar .el-button--text {
+  color: var(--text-secondary);
+}
+
+.navbar .el-button--text:hover {
+  color: var(--primary-color);
+}
+
+/* 卡片通用样式 */
+.el-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+}
+
+.el-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+/* 按钮样式 */
+.el-button--primary {
+  background: var(--gradient-primary);
+  border-color: var(--primary-color);
+}
+
+.el-button--primary:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+/* 输入框样式 */
+.el-input__wrapper {
+  border-color: var(--border-color);
+}
+
+.el-input__wrapper:hover {
+  border-color: var(--primary-light);
+}
+
+.el-input__wrapper.is-focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-color);
+}
+
+/* 标签页样式 */
+.el-tabs__item.is-active {
+  color: var(--primary-color);
+}
+
+.el-tabs__active-bar {
+  background-color: var(--primary-color);
+}
+
+/* 标签样式 */
+.el-tag--primary {
+  --el-tag-bg-color: var(--primary-bg);
+  --el-tag-border-color: var(--border-color);
+  --el-tag-text-color: var(--primary-color);
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-light);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
+}
+
+/* 选中文本样式 */
+::selection {
+  background-color: var(--primary-bg);
+  color: var(--primary-dark);
+}
+
+/* 链接样式 */
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--primary-dark);
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}

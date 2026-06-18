@@ -33,7 +33,7 @@ const routes = [
     path: '/videos',
     name: 'VideoList',
     component: () => import('../views/VideoList.vue'),
-    meta: { title: '视频' }
+    meta: { title: '视频学习' }
   },
   {
     path: '/videos/:id',
@@ -48,7 +48,6 @@ const routes = [
   {
     path: '/admin',
     name: 'AdminLayout',
-    component: () => import('../views/Home.vue'),
     redirect: '/admin/category-manage',
     children: [
       {
@@ -78,10 +77,15 @@ const router = createRouter({
   routes
 })
 
-router.afterEach((to) => {
+router.beforeEach((to, from, next) => {
   if (to.meta.title) {
     document.title = to.meta.title + ' - AI云学智训平台'
   }
+  next()
+})
+
+router.afterEach((to) => {
+  document.title = to.meta.title + ' - AI云学智训平台'
 })
 
 export default router

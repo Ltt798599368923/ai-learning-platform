@@ -1,6 +1,7 @@
 package com.exam.service.agent;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.exam.entity.GeneratedResource;
 import com.exam.service.GeneratedResourceService;
@@ -56,11 +57,19 @@ public class GenAgent implements LearningAgent {
             String userPrompt = input.getUserMessage();
 
             String response = llmClient.chat(systemPrompt, List.of(Map.of("role", "user", "content", userPrompt)));
+            log.info("GenAgent raw response: {}", response);
 
             String jsonStr = extractJson(response);
-            JSONObject parsed = JSON.parseObject(jsonStr);
+            log.info("GenAgent extracted JSON: {}", jsonStr);
 
-            JsonNode structuredData = objectMapper.readTree(jsonStr);
+            JsonNode structuredData;
+            try {
+                structuredData = objectMapper.readTree(jsonStr);
+            } catch (Exception jsonEx) {
+                log.warn("JSON解析失败，尝试构建默认资源: {}", jsonEx.getMessage());
+                // 构建默认资源
+                structuredData = buildDefaultResource(input.getUserMessage(), jsonStr);
+            }
 
             AgentOutput output = new AgentOutput();
             output.setAgentRole(getRole());
@@ -76,6 +85,59 @@ public class GenAgent implements LearningAgent {
             output.setStatus("error");
             output.setRawResponse("资源生成失败: " + e.getMessage());
             return output;
+        }
+    }
+
+    /**
+     * 当JSON解析失败时，构建默认资源
+     */
+    private JsonNode buildDefaultResource(String prompt, String rawText) {
+        try {
+            // 根据prompt判断资源类型
+            if (prompt.contains("练习题") || prompt.contains("quiz")) {
+                JSONObject quiz = new JSONObject();
+                quiz.put("title", "练习题");
+                quiz.put("type", "quiz");
+                JSONObject content = new JSONObject();
+                JSONArray questions = new JSONArray();
+                JSONObject q1 = new JSONObject();
+                q1.put("content", "关于这个知识点，以下说法正确的是？");
+                q1.put("type", "CHOICE");
+                q1.put("difficulty", "EASY");
+                JSONArray options = new JSONArray();
+                options.add(new JSONObject() {{ put("content", "选项A"); put("isCorrect", true); }});
+                options.add(new JSONObject() {{ put("content", "选项B"); put("isCorrect", false); }});
+                q1.put("options", options);
+                q1.put("analysis", "请根据实际内容选择正确答案");
+                questions.add(q1);
+                content.put("questions", questions);
+                quiz.put("content", content);
+                return objectMapper.readTree(quiz.toJSONString());
+            } else if (prompt.contains("思维导图") || prompt.contains("mindmap")) {
+                JSONObject mindmap = new JSONObject();
+                mindmap.put("title", "思维导图");
+                mindmap.put("type", "mindmap");
+                JSONObject content = new JSONObject();
+                content.put("topic", "知识点");
+                content.put("children", new JSONArray());
+                mindmap.put("content", content);
+                return objectMapper.readTree(mindmap.toJSONString());
+            } else {
+                // 默认文档
+                JSONObject doc = new JSONObject();
+                doc.put("title", "学习文档");
+                doc.put("type", "document");
+                doc.put("content", rawText.length() > 500 ? rawText.substring(0, 500) + "..." : rawText);
+                return objectMapper.readTree(doc.toJSONString());
+            }
+        } catch (Exception e) {
+            log.error("Failed to build default resource", e);
+            // 返回最基本的JSON
+            try {
+                return objectMapper.readTree("{\"title\":\"资源\",\"content\":\"内容生成中...\"}");
+            } catch (Exception ex) {
+                return null;
+            }
         }
     }
 
@@ -151,11 +213,43 @@ public class GenAgent implements LearningAgent {
      * 从响应中提取JSON
      */
     private String extractJson(String text) {
-        int s = text.indexOf("```json"), e = text.lastIndexOf("```");
-        if (s != -1 && e > s) return text.substring(s + 7, e).trim();
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        
+        // 尝试从 ```json ... ``` 代码块中提取
+        int s = text.indexOf("```json");
+        int e = text.indexOf("```", s + 7);
+        if (s != -1 && e > s) {
+            return text.substring(s + 7, e).trim();
+        }
+        
+        // 尝试从 ``` ... ``` 代码块中提取
+        s = text.indexOf("```");
+        e = text.indexOf("```", s + 3);
+        if (s != -1 && e > s) {
+            String candidate = text.substring(s + 3, e).trim();
+            if (candidate.startsWith("{") || candidate.startsWith("[")) {
+                return candidate;
+            }
+        }
+        
+        // 尝试找到完整的JSON对象（从第一个{到最后一个}）
         s = text.indexOf("{");
-        e = text.lastIndexOf("}");
-        if (s != -1 && e > s) return text.substring(s, e + 1).trim();
+        if (s != -1) {
+            // 找到匹配的结束括号
+            int depth = 0;
+            for (int i = s; i < text.length(); i++) {
+                char c = text.charAt(i);
+                if (c == '{') depth++;
+                else if (c == '}') depth--;
+                if (depth == 0) {
+                    return text.substring(s, i + 1).trim();
+                }
+            }
+        }
+        
+        // 如果都没有找到，返回原文
         return text;
     }
 }

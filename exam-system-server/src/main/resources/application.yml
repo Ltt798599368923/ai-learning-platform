@@ -24,7 +24,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver  # MySQL驱动
     url: jdbc:mysql://127.0.0.1:3306/exam_system?useUnicode=true&characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Shanghai  # 数据库连接URL
     username: root  # 数据库用户名
-    password: root123  # 数据库密码
+    password: 132200  # 数据库密码
   
   # Jackson配置
   jackson:
@@ -61,7 +61,7 @@ logging:
 kimi:
   api:
     base-url: https://token-plan-cn.xiaomimimo.com/v1  # 小米MiMo API地址（兼容OpenAI格式）
-    api-key: tp-csbrteoq2m9h4gfxm66p6y8nhy3so6s15wvgy49zr0elg3pk  # 在 https://platform.xiaomimimo.com 控制台获取
+    api-key: tp-c5w5n50mj1zc89xu4eiyjtu3j5p5u923ciw2i4omjn629eb3  # 在 https://platform.xiaomimimo.com 控制台获取
     model: mimo-v2.5-pro  # 小米MiMo模型
     max-tokens: 2000  # 最大生成token数
     temperature: 0.3  # 较低的temperature确保判卷结果稳定

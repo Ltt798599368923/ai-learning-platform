@@ -7,6 +7,8 @@ import com.exam.entity.PathNode;
 import com.exam.entity.PathNodeKp;
 import com.exam.mapper.KnowledgePointMapper;
 import com.exam.mapper.LearningPathMapper;
+import com.exam.entity.GeneratedResource;
+import com.exam.mapper.GeneratedResourceMapper;
 import com.exam.mapper.PathNodeMapper;
 import com.exam.mapper.PathNodeKpMapper;
 import com.exam.service.LearningPathService;
@@ -36,6 +38,9 @@ public class LearningPathServiceImpl implements LearningPathService {
 
     @Autowired
     private KnowledgePointMapper knowledgePointMapper;
+
+    @Autowired
+    private GeneratedResourceMapper generatedResourceMapper;
 
     @Override
     @Transactional
@@ -71,9 +76,11 @@ public class LearningPathServiceImpl implements LearningPathService {
         // 获取路径节点
         List<PathNode> nodes = pathNodeMapper.selectByPathId(pathId);
 
-        // 收集所有节点 ID，批量查关联知识点
+        // 收集所有节点 ID
+        List<Long> nodeIds = nodes.stream().map(PathNode::getId).collect(Collectors.toList());
+
+        // 批量查关联知识点
         if (!nodes.isEmpty()) {
-            List<Long> nodeIds = nodes.stream().map(PathNode::getId).collect(Collectors.toList());
             List<PathNodeKp> allKps = pathNodeKpMapper.selectList(
                     new LambdaQueryWrapper<PathNodeKp>().in(PathNodeKp::getPathNodeId, nodeIds)
             );
@@ -105,6 +112,19 @@ public class LearningPathServiceImpl implements LearningPathService {
                         node.setKnowledgePoints(new ArrayList<>());
                     }
                 }
+            }
+
+            // 批量查关联资源
+            List<GeneratedResource> allResources = generatedResourceMapper.selectByPathNodeIds(nodeIds);
+
+            // 按节点 ID 分组资源
+            Map<Long, List<GeneratedResource>> nodeResourceMap = allResources.stream()
+                    .collect(Collectors.groupingBy(GeneratedResource::getPathNodeId));
+
+            // 填到每个节点上
+            for (PathNode node : nodes) {
+                List<GeneratedResource> nodeResources = nodeResourceMap.get(node.getId());
+                node.setResources(nodeResources != null ? nodeResources : new ArrayList<>());
             }
         }
 
@@ -175,5 +195,10 @@ public class LearningPathServiceImpl implements LearningPathService {
         );
         // 删除路径
         learningPathMapper.deleteById(pathId);
+    }
+
+    @Override
+    public PathNode getPathNodeById(Long nodeId) {
+        return pathNodeMapper.selectById(nodeId);
     }
 }

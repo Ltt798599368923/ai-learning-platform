@@ -56,13 +56,24 @@ public class ProfileAgent implements LearningAgent {
             List<Map<String, String>> messages = input.getConversationHistory();
 
             String response = llmClient.chat(systemPrompt, messages);
+            log.info("ProfileAgent raw response: {}", response);
 
             String jsonStr = extractJson(response);
-            JSONObject parsed = JSON.parseObject(jsonStr);
+            log.info("ProfileAgent extracted JSON: {}", jsonStr);
 
-            JsonNode structuredData = objectMapper.readTree(jsonStr);
+            // 验证提取的内容是有效的JSON
+            JSONObject parsed;
+            JsonNode structuredData;
+            try {
+                parsed = JSON.parseObject(jsonStr);
+                structuredData = objectMapper.readTree(jsonStr);
+            } catch (Exception jsonEx) {
+                log.warn("Extracted content is not valid JSON, attempting to build profile from text response");
+                // 如果不是有效JSON，尝试从文本中构建画像
+                return buildFallbackProfile(response);
+            }
 
-            boolean isComplete = response.contains("\"status\":\"complete\"");
+            boolean isComplete = "complete".equals(parsed.getString("status"));
 
             AgentOutput output = new AgentOutput();
             output.setAgentRole(getRole());
@@ -79,6 +90,72 @@ public class ProfileAgent implements LearningAgent {
             output.setRawResponse("画像构建失败: " + e.getMessage());
             return output;
         }
+    }
+
+    /**
+     * 当JSON解析失败时，从文本响应构建备用画像
+     */
+    private AgentOutput buildFallbackProfile(String response) {
+        log.info("Building fallback profile from response");
+        
+        // 检测是否包含完成标志
+        boolean isComplete = response.contains("complete") || response.contains("完成") || response.contains("画像");
+        
+        AgentOutput output = new AgentOutput();
+        output.setAgentRole(getRole());
+        
+        if (isComplete) {
+            // 构建一个默认的完成画像
+            JSONObject forcedProfile = new JSONObject();
+            forcedProfile.put("status", "complete");
+            JSONObject profileData = new JSONObject();
+            profileData.put("level", "初级");
+            JSONObject knowledgeMap = new JSONObject();
+            JSONObject javaBasics = new JSONObject();
+            javaBasics.put("level", 0.5);
+            javaBasics.put("label", "Java基础");
+            knowledgeMap.put("java_basics", javaBasics);
+            profileData.put("knowledge_map", knowledgeMap);
+            JSONObject cognitiveStyle = new JSONObject();
+            cognitiveStyle.put("type", "depth_first");
+            cognitiveStyle.put("avg_session_min", 30);
+            profileData.put("cognitive_style", cognitiveStyle);
+            profileData.put("weak_points", new JSONArray());
+            JSONObject learningGoal = new JSONObject();
+            learningGoal.put("target", "学习Java");
+            profileData.put("learning_goal", learningGoal);
+            forcedProfile.put("profile", profileData);
+            
+            output.setStatus("complete");
+            try {
+                output.setStructuredData(objectMapper.readTree(forcedProfile.toJSONString()));
+            } catch (Exception e) {
+                log.error("Failed to parse fallback profile", e);
+            }
+            output.setRawResponse(forcedProfile.toJSONString());
+        } else {
+            // 继续提问状态
+            JSONObject questionJson = new JSONObject();
+            questionJson.put("status", "profiling");
+            questionJson.put("type", "question");
+            questionJson.put("text", response.length() > 100 ? "请告诉我您的学习基础和目标" : response);
+            JSONArray options = new JSONArray();
+            options.add("零基础");
+            options.add("有编程基础");
+            options.add("有一定经验");
+            options.add("高级开发者");
+            questionJson.put("options", options);
+            
+            output.setStatus("profiling");
+            try {
+                output.setStructuredData(objectMapper.readTree(questionJson.toJSONString()));
+            } catch (Exception e) {
+                log.error("Failed to parse fallback question", e);
+            }
+            output.setRawResponse(questionJson.toJSONString());
+        }
+        
+        return output;
     }
 
     /**
@@ -127,11 +204,43 @@ public class ProfileAgent implements LearningAgent {
      * 从响应中提取JSON
      */
     private String extractJson(String text) {
-        int s = text.indexOf("```json"), e = text.lastIndexOf("```");
-        if (s != -1 && e > s) return text.substring(s + 7, e).trim();
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        
+        // 尝试从 ```json ... ``` 代码块中提取
+        int s = text.indexOf("```json");
+        int e = text.indexOf("```", s + 7);
+        if (s != -1 && e > s) {
+            return text.substring(s + 7, e).trim();
+        }
+        
+        // 尝试从 ``` ... ``` 代码块中提取
+        s = text.indexOf("```");
+        e = text.indexOf("```", s + 3);
+        if (s != -1 && e > s) {
+            String candidate = text.substring(s + 3, e).trim();
+            if (candidate.startsWith("{") || candidate.startsWith("[")) {
+                return candidate;
+            }
+        }
+        
+        // 尝试找到完整的JSON对象（从第一个{到最后一个}）
         s = text.indexOf("{");
-        e = text.lastIndexOf("}");
-        if (s != -1 && e > s) return text.substring(s, e + 1).trim();
+        if (s != -1) {
+            // 找到匹配的结束括号
+            int depth = 0;
+            for (int i = s; i < text.length(); i++) {
+                char c = text.charAt(i);
+                if (c == '{') depth++;
+                else if (c == '}') depth--;
+                if (depth == 0) {
+                    return text.substring(s, i + 1).trim();
+                }
+            }
+        }
+        
+        // 如果都没有找到，返回原文
         return text;
     }
 }

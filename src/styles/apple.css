@@ -1,0 +1,303 @@
+/* Apple Design System - 毛玻璃风格 */
+
+/* ========== CSS变量 ========== */
+:root {
+  /* 颜色系统 */
+  --apple-bg: #f5f5f7;
+  --apple-card: rgba(255, 255, 255, 0.72);
+  --apple-card-hover: rgba(255, 255, 255, 0.88);
+  --apple-text-primary: #1d1d1f;
+  --apple-text-secondary: #86868b;
+  --apple-text-tertiary: #aeaeb2;
+  --apple-blue: #0071e3;
+  --apple-blue-hover: #0077ed;
+  --apple-green: #34c759;
+  --apple-red: #ff3b30;
+  --apple-orange: #ff9500;
+  --apple-purple: #af52de;
+  --apple-border: rgba(0, 0, 0, 0.08);
+  --apple-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --apple-shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+  
+  /* 毛玻璃 */
+  --apple-blur: saturate(180%) blur(20px);
+  --apple-blur-light: saturate(200%) blur(30px);
+  
+  /* 圆角 */
+  --apple-radius: 12px;
+  --apple-radius-lg: 18px;
+  --apple-radius-xl: 22px;
+  
+  /* 间距 */
+  --apple-space-xs: 4px;
+  --apple-space-sm: 8px;
+  --apple-space-md: 16px;
+  --apple-space-lg: 24px;
+  --apple-space-xl: 32px;
+  --apple-space-2xl: 48px;
+  
+  /* 字体 */
+  --apple-font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ========== 全局重置 ========== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--apple-font);
+  background: linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 50%, #f0f0f5 100%);
+  background-attachment: fixed;
+  color: var(--apple-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* 高级背景效果 */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(ellipse at 20% 50%, rgba(0, 113, 227, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(175, 82, 222, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(52, 199, 89, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ========== 毛玻璃卡片 ========== */
+.glass-card {
+  background: var(--apple-card);
+  backdrop-filter: var(--apple-blur);
+  -webkit-backdrop-filter: var(--apple-blur);
+  border-radius: var(--apple-radius-lg);
+  border: 1px solid var(--apple-border);
+  box-shadow: var(--apple-shadow);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: var(--apple-card-hover);
+  box-shadow: var(--apple-shadow-lg);
+  transform: translateY(-2px);
+}
+
+/* ========== 毛玻璃背景 ========== */
+.glass-bg {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: var(--apple-blur-light);
+  -webkit-backdrop-filter: var(--apple-blur-light);
+  border-bottom: 1px solid var(--apple-border);
+}
+
+/* ========== 按钮样式 ========== */
+.apple-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 980px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.apple-btn-primary {
+  background: var(--apple-blue);
+  color: #fff;
+}
+
+.apple-btn-primary:hover {
+  background: var(--apple-blue-hover);
+  transform: scale(1.02);
+}
+
+.apple-btn-secondary {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--apple-text-primary);
+}
+
+.apple-btn-secondary:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.apple-btn-ghost {
+  background: transparent;
+  color: var(--apple-blue);
+}
+
+.apple-btn-ghost:hover {
+  background: rgba(0, 113, 227, 0.08);
+}
+
+/* ========== 输入框 ========== */
+.apple-input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: var(--apple-radius);
+  border: 1px solid var(--apple-border);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  font-size: 15px;
+  color: var(--apple-text-primary);
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.apple-input:focus {
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+}
+
+.apple-input::placeholder {
+  color: var(--apple-text-tertiary);
+}
+
+/* ========== 标签 ========== */
+.apple-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 980px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.apple-tag-blue {
+  background: rgba(0, 113, 227, 0.1);
+  color: var(--apple-blue);
+}
+
+.apple-tag-green {
+  background: rgba(52, 199, 89, 0.1);
+  color: var(--apple-green);
+}
+
+.apple-tag-orange {
+  background: rgba(255, 149, 0, 0.1);
+  color: var(--apple-orange);
+}
+
+.apple-tag-red {
+  background: rgba(255, 59, 48, 0.1);
+  color: var(--apple-red);
+}
+
+/* ========== 分割线 ========== */
+.apple-divider {
+  height: 1px;
+  background: var(--apple-border);
+  margin: var(--apple-space-md) 0;
+}
+
+/* ========== 滚动条 ========== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* ========== 动画 ========== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.4s ease forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease forwards;
+}
+
+/* ========== 渐变背景 ========== */
+.gradient-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-bg-blue {
+  background: linear-gradient(135deg, #0071e3 0%, #00c6fb 100%);
+}
+
+.gradient-bg-green {
+  background: linear-gradient(135deg, #34c759 0%, #30d15c 100%);
+}
+
+/* ========== 文字渐变 ========== */
+.text-gradient {
+  background: linear-gradient(135deg, #0071e3 0%, #af52de 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ========== 工具类 ========== */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.gap-sm { gap: var(--apple-space-sm); }
+.gap-md { gap: var(--apple-space-md); }
+.gap-lg { gap: var(--apple-space-lg); }
+.gap-xl { gap: var(--apple-space-xl); }
+.p-md { padding: var(--apple-space-md); }
+.p-lg { padding: var(--apple-space-lg); }
+.p-xl { padding: var(--apple-space-xl); }
+.m-md { margin: var(--apple-space-md); }
+.text-center { text-align: center; }
+.text-sm { font-size: 13px; }
+.text-base { font-size: 15px; }
+.text-lg { font-size: 17px; }
+.text-xl { font-size: 20px; }
+.text-2xl { font-size: 24px; }
+.text-3xl { font-size: 28px; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+.text-secondary { color: var(--apple-text-secondary); }
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+.overflow-hidden { overflow: hidden; }
+.relative { position: relative; }
+.absolute { position: absolute; }

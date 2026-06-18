@@ -49,4 +49,9 @@ public interface LearningPathService {
      * 删除学习路径
      */
     void deleteLearningPath(Long pathId);
+
+    /**
+     * 根据节点ID获取节点信息
+     */
+    PathNode getPathNodeById(Long nodeId);
 }
